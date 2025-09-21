@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlash Home</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="hcss.css">
+
+  <style>
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      color: var(--primary-dark);
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+    }
+
+    .hero .btn {
+      font-size: 1rem;
+      padding: 12px 28px;
+    }
+
+    /* Stats Section */
+    .stats-home {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      max-width: 1000px;
+      margin: 3rem auto;
+      padding: 0 1rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      margin-top: 0.5rem;
+      font-weight: 500;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: var(--surface);
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .progress-label {
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--primary-dark);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff5252, #ffc107, #4caf50);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+
+    /* Quote Section */
+    .quote-section {
+      text-align: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+      border-radius: 1rem;
+      max-width: 800px;
+      margin: 3rem auto;
+      font-style: italic;
+      color: var(--primary-dark);
+    }
+
+    /* Navbar links */
+    .nav-links a {
+      text-decoration: none;
+      margin: 0 0.8rem;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    /* Notification styles */
+    .notification-wrapper {
+      position: relative;
+      display: inline-block;
+      margin-right: 1rem;
+    }
+
+    #notificationBell {
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+
+    .badge {
+      position: absolute;
+      top: -5px;
+      right: -8px;
+      background: red;
+      color: white;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 50%;
+      display: none;
+    }
+
+    .notification-dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 30px;
+      width: 300px;
+      background: var(--surface);
+      border-radius: 0.6rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      padding: 0.5rem;
+    }
+    
+    /* --- CSS ADDED for the "Clear All" button --- */
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .notification-header h4 {
+      margin: 0;
+      color: var(--primary-dark);
+    }
+    
+    #clearNotificationsBtn {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--primary);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    
+    #clearNotificationsBtn:hover {
+      text-decoration: underline;
+    }
+    /* --- END of CSS ADDED --- */
+
+    .notification-dropdown ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .notification-dropdown ul li {
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .notification-dropdown ul li:last-child {
+      border-bottom: none;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabaseClient.js"></script>
+</head>
+
+<body>
+
+  <nav class="navbar">
+    <div class="nav-content">
+      <a href="index.html" class="logo">
+        <i class="fas fa-tasks"></i> TaskFlash
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="tasks.html">My Tasks</a>
+        <a href="profile.html">Profile</a>
+        <a href="analytics.html">Analytics</a>
+
+        <div class="notification-wrapper">
+          <i class="fas fa-bell" id="notificationBell"></i>
+          <span class="badge" id="notificationCount">0</span>
+          <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notification-header">
+              <h4>Notifications</h4>
+              <a href="#" id="clearNotificationsBtn">Clear All</a>
+            </div>
+            <ul id="notificationList"></ul>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="logout()">Logout</button>
+
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>Welcome to TaskFlash</h1>
+    <p>Organize your tasks, manage your time, and boost productivity.</p>
+    <a href="addtask.html" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Add Your First Task
+    </a>
+  </section>
+
+  <div class="stats-home">
+    <div class="stat-card">
+      <div class="stat-number" id="completedCount">0</div>
+      <div class="stat-label">Completed Tasks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="pendingCount">0</div>
+      <div class="stat-label">Pending Tasks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="todayCount">0</div>
+      <div class="stat-label">Due Today</div>
+    </div>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-label">Task Completion Progress</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div id="progressText" style="margin-top:0.5rem; color: var(--text-secondary); font-size:0.9rem;">
+      0% Completed
+    </div>
+  </div>
+
+  <div class="quote-section" id="quote">
+    “Productivity is never an accident. It is always the result of a commitment to excellence.”
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            window.location.href = "login.html";
+        } else {
+            currentUser = session.user;
+            await initializePage();
+        }
+    });
+
+    async function initializePage() {
+        // ... (Quote rotation code remains the same) ...
+        const quotes = [
+            "Small daily improvements lead to big results.",
+            "Your future is created by what you do today, not tomorrow.",
+            "Focus on being productive instead of busy.",
+            "The key is not to prioritize what’s on your schedule, but to schedule your priorities."
+        ];
+        document.getElementById("quote").innerText = quotes[Math.floor(Math.random() * quotes.length)];
+
+
+        // --- JAVASCRIPT MODIFIED: Added event listener for the new button ---
+        const bell = document.getElementById("notificationBell");
+        const dropdown = document.getElementById("notificationDropdown");
+        const clearBtn = document.getElementById("clearNotificationsBtn");
+        
+        bell.addEventListener("click", async () => {
+            dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+
+            if (dropdown.style.display === "block") {
+                await supabase.from('notifications').update({ seen: true }).eq('user_id', currentUser.id).eq('seen', false);
+                await updateNotificationUI();
+            }
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!bell.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = "none";
+            }
+        });
+
+        clearBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            clearAllNotifications();
+        });
+        // --- END OF JAVASCRIPT MODIFIED ---
+
+
+        await requestNotificationPermission();
+        await updateStats();
+        await updateNotificationUI();
+        setInterval(checkDueTasks, 60000);
+        await checkDueTasks();
+    }
+
+    // =====================
+    // Logout
+    // =====================
+    async function logout() {
+        const { error } = await supabase.auth.signOut();
+        if (error) { alert("Error logging out: " + error.message); }
+        else {
+            alert("Logged out successfully!");
+            window.location.href = "login.html";
+        }
+    }
+
+    // =====================
+    // Stats
+    // =====================
+    async function updateStats() {
+        const { data: tasks, error } = await supabase.from('tasks').select('completed, due_datetime').eq('user_id', currentUser.id);
+        if (error) { console.error("Error fetching stats:", error); return; }
+        const completed = tasks.filter(t => t.completed).length;
+        const pending = tasks.filter(t => !t.completed).length;
+        const todayDate = new Date().toLocaleDateString("en-CA");
+        const todayCount = tasks.filter(t => {
+            if (!t.due_datetime) return false;
+            const taskDate = t.due_datetime.split("T")[0];
+            return !t.completed && taskDate === todayDate;
+        }).length;
+        document.getElementById("completedCount").innerText = completed;
+        document.getElementById("pendingCount").innerText = pending;
+        document.getElementById("todayCount").innerText = todayCount;
+        const total = tasks.length;
+        const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+        document.getElementById("progressFill").style.width = percent + "%";
+        document.getElementById("progressText").innerText = `${percent}% Completed`;
+    }
+
+    // =====================
+    // Notifications
+    // =====================
+    function requestNotificationPermission() {
+        if ("Notification" in window && Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+    }
+
+    async function sendNotification(title, message) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { body: message, icon: "https://cdn-icons-png.flaticon.com/512/992/992700.png" });
+        }
+        const newNote = { user_id: currentUser.id, title, message, seen: false };
+        const { error } = await supabase.from('notifications').insert(newNote);
+        if (error) console.error("Error saving notification:", error);
+        await updateNotificationUI();
+    }
+    
+    // --- JAVASCRIPT ADDED: New function to clear notifications ---
+    async function clearAllNotifications() {
+        const confirmed = confirm("Are you sure you want to clear all notifications?");
+
+        if (confirmed && currentUser) {
+            const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('user_id', currentUser.id);
+
+            if (error) {
+                console.error("Error clearing notifications:", error);
+                alert("Could not clear notifications.");
+            } else {
+                console.log("All notifications cleared.");
+                await updateNotificationUI(); // Refresh the UI to show it's empty
+            }
+        }
+    }
+    // --- END of JAVASCRIPT ADDED ---
+
+    // This is the fully robust checkDueTasks function
+    async function checkDueTasks() {
+        if (!currentUser || !currentUser.id) {
+            console.log("User data not ready yet, skipping notification check.");
+            return;
+        }
+        const now = new Date();
+        const { data: allPendingTasks, error: fetchError } = await supabase.from('tasks')
+            .select('id, name, due_datetime, notified1hr, notifieddue')
+            .eq('user_id', currentUser.id)
+            .eq('completed', false);
+        if (fetchError) {
+            console.error("Error fetching tasks for notification check:", fetchError);
+            return;
+        }
+        if (!allPendingTasks || allPendingTasks.length === 0) {
+            return;
+        }
+        const tasksToNotifyNow = [];
+        const tasksToNotify1hr = [];
+        allPendingTasks.forEach(task => {
+            if (!task.due_datetime) return;
+            const dueTime = new Date(task.due_datetime);
+            const diffMinutes = Math.round((dueTime - now) / 60000);
+            if (diffMinutes <= 0 && !task.notifieddue) {
+                tasksToNotifyNow.push(task);
+            }
+            if (diffMinutes <= 60 && diffMinutes > 0 && !task.notified1hr) {
+                tasksToNotify1hr.push(task);
+            }
+        });
+        if (tasksToNotifyNow.length > 0) {
+            const taskIds = tasksToNotifyNow.map(t => t.id);
+            const { data: updated, error } = await supabase
+                .from('tasks')
+                .update({ notifieddue: true })
+                .in('id', taskIds)
+                .select();
+            if (updated && !error) {
+                console.log(`Sending ${updated.length} 'Due Now' notifications.`);
+                updated.forEach(task => {
+                    sendNotification("⚡ Task Due Now", `${task.name} is due right now!`);
+                });
+            }
+        }
+        if (tasksToNotify1hr.length > 0) {
+            const taskIds = tasksToNotify1hr.map(t => t.id);
+            const { data: updated, error } = await supabase
+                .from('tasks')
+                .update({ notified1hr: true })
+                .in('id', taskIds)
+                .select();
+            if (updated && !error) {
+                console.log(`Sending ${updated.length} '1-Hour Warning' notifications.`);
+                updated.forEach(task => {
+                    sendNotification("⏳ Upcoming Task", `${task.name} is due in about an hour!`);
+                });
+            }
+        }
+    }
+
+    async function updateNotificationUI() {
+        const { data: notifications, error } = await supabase.from('notifications')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('time', { ascending: false })
+            .limit(20);
+
+        if (error) { console.error("Error fetching notifications:", error); return; }
+
+        const list = document.getElementById("notificationList");
+        const count = document.getElementById("notificationCount");
+        list.innerHTML = "";
+
+        if (notifications.length === 0) {
+            list.innerHTML = "<li>No new notifications.</li>"; // Show message when empty
+        } else {
+            notifications.forEach(note => {
+                const li = document.createElement("li");
+                li.innerHTML = `<strong>${note.title}</strong><br><small>${note.message}</small><br><small>${new Date(note.time).toLocaleString()}</small>`;
+                list.appendChild(li);
+            });
+        }
+        
+        const unseen = notifications.filter(n => !n.seen).length;
+        if (unseen > 0) {
+            count.innerText = unseen;
+            count.style.display = "inline-block";
+        } else {
+            count.style.display = "none";
+        }
+    }
+</script>
+
+</body>
+
+</html>

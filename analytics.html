@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - TaskFlash</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="hcss.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .analytics-container {
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 1rem;
+    }
+
+    .analytics-container h2 {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: var(--primary-dark);
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 1rem;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .progress-section {
+      background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+      padding: 2rem;
+      border-radius: 1rem;
+      text-align: center;
+    }
+
+    .progress-bar {
+      height: 20px;
+      background: #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0;
+      transition: width 0.5s ease-in-out;
+    }
+
+    .quote-section {
+      margin-top: 2rem;
+      text-align: center;
+      font-style: italic;
+      color: var(--primary-dark);
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      margin: 0 0.8rem;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabaseClient.js"></script>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <a href="index.html" class="logo">
+        <i class="fas fa-tasks"></i> TaskFlash
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="tasks.html">My Tasks</a>
+        <a href="profile.html">Profile</a>
+        <a href="analytics.html" class="active">Analytics</a>
+        <button type="button" class="btn btn-primary" onclick="logout()">Logout</button>
+
+      </div>
+    </div>
+  </nav>
+
+  <!-- Analytics -->
+  <div class="analytics-container">
+    <h2>Task Analytics Dashboard</h2>
+
+    <!-- Stats Summary -->
+    <div class="stats-bar">
+      <div class="stat-box">
+        <div class="stat-number" id="totalTasks">0</div>
+        <div>Total Tasks</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number" id="completedTasks">0</div>
+        <div>Completed</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number" id="pendingTasks">0</div>
+        <div>Pending</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number" id="completionRate">0%</div>
+        <div>Completion Rate</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts">
+      <div class="chart-card">
+        <h3>Completed vs Pending</h3>
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Tasks by Urgency</h3>
+        <canvas id="barChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Tasks Completed Over Time</h3>
+        <canvas id="lineChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section">
+      <h3>Weekly Productivity</h3>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- Quote -->
+    <div class="quote-section" id="quote">
+      “Data turns into insights, and insights drive productivity.”
+    </div>
+  </div>
+
+ <script>
+    let currentUser = null;
+
+    // --- NOTIFICATION SCRIPT ADDED ---
+    function requestNotificationPermission() {
+        if ("Notification" in window && Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+    }
+
+    async function sendNotification(title, message) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { body: message, icon: "https://cdn-icons-png.flaticon.com/512/992/992700.png" });
+        }
+        if (currentUser) {
+            const newNote = {
+                user_id: currentUser.id,
+                title,
+                message,
+                seen: false
+            };
+            const { error } = await supabase.from('notifications').insert(newNote);
+            if (error) console.error("Error saving notification:", error);
+        }
+    }
+
+    async function checkDueTasks() {
+        if (!currentUser || !currentUser.id) { return; }
+        const now = new Date();
+        const { data: allPendingTasks, error: fetchError } = await supabase.from('tasks')
+            .select('id, name, due_datetime, notified1hr, notifieddue')
+            .eq('user_id', currentUser.id)
+            .eq('completed', false);
+
+        if (fetchError) { return; }
+        if (!allPendingTasks || allPendingTasks.length === 0) { return; }
+
+        const tasksToNotifyNow = [];
+        const tasksToNotify1hr = [];
+
+        allPendingTasks.forEach(task => {
+            if (!task.due_datetime) return;
+            const dueTime = new Date(task.due_datetime);
+            const diffMinutes = Math.round((dueTime - now) / 60000);
+
+            if (diffMinutes <= 0 && !task.notifieddue) {
+                tasksToNotifyNow.push(task);
+            }
+            if (diffMinutes <= 60 && diffMinutes > 0 && !task.notified1hr) {
+                tasksToNotify1hr.push(task);
+            }
+        });
+
+        if (tasksToNotifyNow.length > 0) {
+            const taskIds = tasksToNotifyNow.map(t => t.id);
+            const { data: updated, error } = await supabase
+                .from('tasks')
+                .update({ notifieddue: true })
+                .in('id', taskIds)
+                .select();
+            if (updated && !error) {
+                updated.forEach(task => {
+                    sendNotification("⚡ Task Due Now", `${task.name} is due right now!`);
+                });
+            }
+        }
+
+        if (tasksToNotify1hr.length > 0) {
+            const taskIds = tasksToNotify1hr.map(t => t.id);
+            const { data: updated, error } = await supabase
+                .from('tasks')
+                .update({ notified1hr: true })
+                .in('id', taskIds)
+                .select();
+            if (updated && !error) {
+                updated.forEach(task => {
+                    sendNotification("⏳ Upcoming Task", `${task.name} is due in about an hour!`);
+                });
+            }
+        }
+    }
+    // --- END OF NOTIFICATION SCRIPT ---
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            window.location.href = "login.html";
+        } else {
+            currentUser = session.user;
+            await loadAnalytics();
+
+            // --- NOTIFICATION TIMER STARTED ---
+            await requestNotificationPermission();
+            setInterval(checkDueTasks, 60000); // Check every minute
+            await checkDueTasks(); // Also check once on page load
+        }
+    });
+
+    async function loadAnalytics() {
+        // --- SUPABASE FETCH ---
+        const { data: tasks, error } = await supabase.from('tasks')
+            .select('completed, urgency, due_datetime')
+            .eq('user_id', currentUser.id);
+        
+        if (error) { console.error("Error loading analytics:", error); return; }
+
+        const total = tasks.length;
+        const completed = tasks.filter(t => t.completed).length;
+        const pending = total - completed;
+
+        // Stats
+        document.getElementById("totalTasks").innerText = total;
+        document.getElementById("completedTasks").innerText = completed;
+        document.getElementById("pendingTasks").innerText = pending;
+        document.getElementById("completionRate").innerText = total > 0 ? Math.round((completed / total) * 100) + "%" : "0%";
+
+        // Pie Chart
+        new Chart(document.getElementById("pieChart"), {
+            type: "pie",
+            data: {
+                labels: ["Completed", "Pending"],
+                datasets: [{ data: [completed, pending], backgroundColor: ["#4CAF50", "#FF5252"] }]
+            }
+        });
+
+        // Bar Chart (Urgency)
+        const urgencyCounts = { High: 0, Medium: 0, Low: 0 };
+        tasks.forEach(t => { urgencyCounts[t.urgency] = (urgencyCounts[t.urgency] || 0) + 1; });
+        new Chart(document.getElementById("barChart"), {
+            type: "bar",
+            data: {
+                labels: ["High", "Medium", "Low"],
+                datasets: [{ label: "Tasks", data: [urgencyCounts.High, urgencyCounts.Medium, urgencyCounts.Low], backgroundColor: ["#FF3B30", "#FF9500", "#34C759"] }]
+            }
+        });
+
+        // Line Chart
+        const dateMap = {};
+        tasks.forEach(t => {
+            if (t.completed && t.due_datetime) {
+                const date = new Date(t.due_datetime).toLocaleDateString();
+                dateMap[date] = (dateMap[date] || 0) + 1;
+            }
+        });
+        const labels = Object.keys(dateMap).sort((a,b) => new Date(a) - new Date(b));
+        const values = labels.map(label => dateMap[label]);
+
+        new Chart(document.getElementById("lineChart"), {
+            type: "line",
+            data: {
+                labels,
+                datasets: [{ label: "Completed Tasks", data: values, borderColor: "#007AFF", fill: false, tension: 0.3 }]
+            }
+        });
+
+        // Weekly Productivity
+        const weeklyCompleted = tasks.filter(t => {
+            if (!t.completed || !t.due_datetime) return false;
+            const d = new Date(t.due_datetime);
+            const now = new Date();
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(now.getDate() - 7);
+            return d >= oneWeekAgo && d <= now;
+        }).length;
+        const weeklyTarget = 10;
+        const progress = Math.min((weeklyCompleted / weeklyTarget) * 100, 100);
+        document.getElementById("progressFill").style.width = progress + "%";
+
+        // Random quote
+        const quotes = [
+            "Data turns into insights, and insights drive productivity.",
+            "Analyze your tasks, optimize your results.",
+            "Every chart tells the story of your work ethic.",
+            "Productivity is measurable — let’s improve it!"
+        ];
+        document.getElementById("quote").innerText = quotes[Math.floor(Math.random() * quotes.length)];
+    }
+
+    async function logout() {
+        const { error } = await supabase.auth.signOut();
+        if (error) { alert("Error logging out: " + error.message); }
+        else {
+            alert("Logged out successfully!");
+            window.location.href = "login.html";
+        }
+    }
+</script>
+</body>
+
+</html>
