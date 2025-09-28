@@ -8,6 +8,9 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="hcss.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="notifications.js"></script>
   <style>
     .analytics-container {
       max-width: 1200px;
@@ -174,87 +177,6 @@
 
  <script>
     let currentUser = null;
-
-    // --- NOTIFICATION SCRIPT ADDED ---
-    function requestNotificationPermission() {
-        if ("Notification" in window && Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
-    }
-
-    async function sendNotification(title, message) {
-        if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(title, { body: message, icon: "https://cdn-icons-png.flaticon.com/512/992/992700.png" });
-        }
-        if (currentUser) {
-            const newNote = {
-                user_id: currentUser.id,
-                title,
-                message,
-                seen: false
-            };
-            const { error } = await supabase.from('notifications').insert(newNote);
-            if (error) console.error("Error saving notification:", error);
-        }
-    }
-
-    async function checkDueTasks() {
-        if (!currentUser || !currentUser.id) { return; }
-        const now = new Date();
-        const { data: allPendingTasks, error: fetchError } = await supabase.from('tasks')
-            .select('id, name, due_datetime, notified1hr, notifieddue')
-            .eq('user_id', currentUser.id)
-            .eq('completed', false);
-
-        if (fetchError) { return; }
-        if (!allPendingTasks || allPendingTasks.length === 0) { return; }
-
-        const tasksToNotifyNow = [];
-        const tasksToNotify1hr = [];
-
-        allPendingTasks.forEach(task => {
-            if (!task.due_datetime) return;
-            const dueTime = new Date(task.due_datetime);
-            const diffMinutes = Math.round((dueTime - now) / 60000);
-
-            if (diffMinutes <= 0 && !task.notifieddue) {
-                tasksToNotifyNow.push(task);
-            }
-            if (diffMinutes <= 60 && diffMinutes > 0 && !task.notified1hr) {
-                tasksToNotify1hr.push(task);
-            }
-        });
-
-        if (tasksToNotifyNow.length > 0) {
-            const taskIds = tasksToNotifyNow.map(t => t.id);
-            const { data: updated, error } = await supabase
-                .from('tasks')
-                .update({ notifieddue: true })
-                .in('id', taskIds)
-                .select();
-            if (updated && !error) {
-                updated.forEach(task => {
-                    sendNotification("⚡ Task Due Now", `${task.name} is due right now!`);
-                });
-            }
-        }
-
-        if (tasksToNotify1hr.length > 0) {
-            const taskIds = tasksToNotify1hr.map(t => t.id);
-            const { data: updated, error } = await supabase
-                .from('tasks')
-                .update({ notified1hr: true })
-                .in('id', taskIds)
-                .select();
-            if (updated && !error) {
-                updated.forEach(task => {
-                    sendNotification("⏳ Upcoming Task", `${task.name} is due in about an hour!`);
-                });
-            }
-        }
-    }
-    // --- END OF NOTIFICATION SCRIPT ---
-
     document.addEventListener("DOMContentLoaded", async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {

@@ -7,6 +7,10 @@
   <title>TaskFlash Home</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="hcss.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="notifications.js"></script> 
 
   <style>
     /* Hero Section */
@@ -162,7 +166,6 @@
       padding: 0.5rem;
     }
     
-    /* --- CSS ADDED for the "Clear All" button --- */
     .notification-header {
       display: flex;
       justify-content: space-between;
@@ -187,7 +190,6 @@
     #clearNotificationsBtn:hover {
       text-decoration: underline;
     }
-    /* --- END of CSS ADDED --- */
 
     .notification-dropdown ul {
       list-style: none;
@@ -207,9 +209,72 @@
     .notification-dropdown ul li:last-child {
       border-bottom: none;
     }
+    
+    /* --- CSS FOR MODAL (matches auth pages) --- */
+    .modal {
+      display: none; 
+      position: fixed; 
+      z-index: 1000; 
+      left: 0;
+      top: 0;
+      width: 100%; 
+      height: 100%; 
+      overflow: auto; 
+      background-color: rgba(0,0,0,0.5);
+      padding-top: 60px;
+    }
+
+    .modal-content {
+      max-width: 550px;
+      margin: 1rem auto;
+      background: var(--surface);
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px var(--shadow);
+      padding: 2rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-content h2 {
+      color: var(--primary-dark);
+      margin-bottom: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
+    /* --- END OF MODAL CSS --- */
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabaseClient.js"></script>
 </head>
 
 <body>
@@ -220,7 +285,7 @@
         <i class="fas fa-tasks"></i> TaskFlash
       </a>
       <div class="nav-links">
-        <a href="index.html">Home</a>
+        <a href="index.html" class="active">Home</a>
         <a href="tasks.html">My Tasks</a>
         <a href="profile.html">Profile</a>
         <a href="analytics.html">Analytics</a>
@@ -246,9 +311,9 @@
   <section class="hero">
     <h1>Welcome to TaskFlash</h1>
     <p>Organize your tasks, manage your time, and boost productivity.</p>
-    <a href="addtask.html" class="btn btn-primary">
-      <i class="fas fa-plus"></i> Add Your First Task
-    </a>
+    <button class="btn btn-primary" onclick="openAddTaskModal()">
+      <i class="fas fa-plus"></i> Add a New Task
+    </button>
   </section>
 
   <div class="stats-home">
@@ -280,6 +345,10 @@
     “Productivity is never an accident. It is always the result of a commitment to excellence.”
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="notifications.js"></script> 
+  
   <script>
     let currentUser = null;
 
@@ -291,27 +360,67 @@
             currentUser = session.user;
             await initializePage();
         }
+
+        window.addEventListener('click', function(event) {
+            const addTaskModal = document.getElementById('addTaskModal');
+            if (event.target == addTaskModal) {
+                closeAddTaskModal();
+            }
+        });
     });
 
+    function openAddTaskModal() {
+        const addTaskModal = document.getElementById('addTaskModal');
+        document.getElementById("taskName").value = '';
+        document.getElementById("taskUrgency").value = 'Medium';
+        document.getElementById("taskDuration").value = '';
+        document.getElementById("taskDatetime").value = '';
+        addTaskModal.style.display = 'block';
+    }
+
+    function closeAddTaskModal() {
+        const addTaskModal = document.getElementById('addTaskModal');
+        addTaskModal.style.display = 'none';
+    }
+
+    async function addTask() {
+        if (!currentUser) { return alert("You are not logged in."); }
+        const name = document.getElementById("taskName").value;
+        if (!name) { return alert("Task name is required!"); }
+        
+        const newTask = {
+            user_id: currentUser.id,
+            name: name,
+            urgency: document.getElementById("taskUrgency").value,
+            duration: parseInt(document.getElementById("taskDuration").value) || null,
+            due_datetime: document.getElementById("taskDatetime").value ? new Date(document.getElementById("taskDatetime").value).toISOString() : null,
+            completed: false
+        };
+
+        const { error } = await supabase.from('tasks').insert(newTask);
+        if (error) {
+            alert("Error adding task: " + error.message);
+        } else {
+            alert("Task added successfully!");
+            closeAddTaskModal();
+            await updateStats();
+        }
+    }
+
     async function initializePage() {
-        // ... (Quote rotation code remains the same) ...
         const quotes = [
             "Small daily improvements lead to big results.",
             "Your future is created by what you do today, not tomorrow.",
             "Focus on being productive instead of busy.",
-            "The key is not to prioritize what’s on your schedule, but to schedule your priorities."
         ];
         document.getElementById("quote").innerText = quotes[Math.floor(Math.random() * quotes.length)];
 
-
-        // --- JAVASCRIPT MODIFIED: Added event listener for the new button ---
         const bell = document.getElementById("notificationBell");
         const dropdown = document.getElementById("notificationDropdown");
         const clearBtn = document.getElementById("clearNotificationsBtn");
         
         bell.addEventListener("click", async () => {
             dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-
             if (dropdown.style.display === "block") {
                 await supabase.from('notifications').update({ seen: true }).eq('user_id', currentUser.id).eq('seen', false);
                 await updateNotificationUI();
@@ -328,8 +437,6 @@
             e.preventDefault();
             clearAllNotifications();
         });
-        // --- END OF JAVASCRIPT MODIFIED ---
-
 
         await requestNotificationPermission();
         await updateStats();
@@ -338,175 +445,89 @@
         await checkDueTasks();
     }
 
-    // =====================
-    // Logout
-    // =====================
     async function logout() {
         const { error } = await supabase.auth.signOut();
         if (error) { alert("Error logging out: " + error.message); }
-        else {
-            alert("Logged out successfully!");
-            window.location.href = "login.html";
-        }
+        else { window.location.href = "login.html"; }
     }
 
-    // =====================
-    // Stats
-    // =====================
     async function updateStats() {
+        if (!currentUser) return;
         const { data: tasks, error } = await supabase.from('tasks').select('completed, due_datetime').eq('user_id', currentUser.id);
         if (error) { console.error("Error fetching stats:", error); return; }
+        
         const completed = tasks.filter(t => t.completed).length;
-        const pending = tasks.filter(t => !t.completed).length;
-        const todayDate = new Date().toLocaleDateString("en-CA");
-        const todayCount = tasks.filter(t => {
-            if (!t.due_datetime) return false;
-            const taskDate = t.due_datetime.split("T")[0];
-            return !t.completed && taskDate === todayDate;
-        }).length;
+        const pending = tasks.length - completed;
+        const todayDate = new Date().toISOString().split("T")[0];
+        const todayCount = tasks.filter(t => t.due_datetime && !t.completed && t.due_datetime.startsWith(todayDate)).length;
+        
         document.getElementById("completedCount").innerText = completed;
         document.getElementById("pendingCount").innerText = pending;
         document.getElementById("todayCount").innerText = todayCount;
+        
         const total = tasks.length;
         const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
         document.getElementById("progressFill").style.width = percent + "%";
         document.getElementById("progressText").innerText = `${percent}% Completed`;
     }
 
-    // =====================
-    // Notifications
-    // =====================
-    function requestNotificationPermission() {
-        if ("Notification" in window && Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
-    }
-
-    async function sendNotification(title, message) {
-        if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(title, { body: message, icon: "https://cdn-icons-png.flaticon.com/512/992/992700.png" });
-        }
-        const newNote = { user_id: currentUser.id, title, message, seen: false };
-        const { error } = await supabase.from('notifications').insert(newNote);
-        if (error) console.error("Error saving notification:", error);
-        await updateNotificationUI();
-    }
-    
-    // --- JAVASCRIPT ADDED: New function to clear notifications ---
     async function clearAllNotifications() {
-        const confirmed = confirm("Are you sure you want to clear all notifications?");
-
-        if (confirmed && currentUser) {
-            const { error } = await supabase
-                .from('notifications')
-                .delete()
-                .eq('user_id', currentUser.id);
-
-            if (error) {
-                console.error("Error clearing notifications:", error);
-                alert("Could not clear notifications.");
-            } else {
-                console.log("All notifications cleared.");
-                await updateNotificationUI(); // Refresh the UI to show it's empty
-            }
-        }
-    }
-    // --- END of JAVASCRIPT ADDED ---
-
-    // This is the fully robust checkDueTasks function
-    async function checkDueTasks() {
-        if (!currentUser || !currentUser.id) {
-            console.log("User data not ready yet, skipping notification check.");
-            return;
-        }
-        const now = new Date();
-        const { data: allPendingTasks, error: fetchError } = await supabase.from('tasks')
-            .select('id, name, due_datetime, notified1hr, notifieddue')
-            .eq('user_id', currentUser.id)
-            .eq('completed', false);
-        if (fetchError) {
-            console.error("Error fetching tasks for notification check:", fetchError);
-            return;
-        }
-        if (!allPendingTasks || allPendingTasks.length === 0) {
-            return;
-        }
-        const tasksToNotifyNow = [];
-        const tasksToNotify1hr = [];
-        allPendingTasks.forEach(task => {
-            if (!task.due_datetime) return;
-            const dueTime = new Date(task.due_datetime);
-            const diffMinutes = Math.round((dueTime - now) / 60000);
-            if (diffMinutes <= 0 && !task.notifieddue) {
-                tasksToNotifyNow.push(task);
-            }
-            if (diffMinutes <= 60 && diffMinutes > 0 && !task.notified1hr) {
-                tasksToNotify1hr.push(task);
-            }
-        });
-        if (tasksToNotifyNow.length > 0) {
-            const taskIds = tasksToNotifyNow.map(t => t.id);
-            const { data: updated, error } = await supabase
-                .from('tasks')
-                .update({ notifieddue: true })
-                .in('id', taskIds)
-                .select();
-            if (updated && !error) {
-                console.log(`Sending ${updated.length} 'Due Now' notifications.`);
-                updated.forEach(task => {
-                    sendNotification("⚡ Task Due Now", `${task.name} is due right now!`);
-                });
-            }
-        }
-        if (tasksToNotify1hr.length > 0) {
-            const taskIds = tasksToNotify1hr.map(t => t.id);
-            const { data: updated, error } = await supabase
-                .from('tasks')
-                .update({ notified1hr: true })
-                .in('id', taskIds)
-                .select();
-            if (updated && !error) {
-                console.log(`Sending ${updated.length} '1-Hour Warning' notifications.`);
-                updated.forEach(task => {
-                    sendNotification("⏳ Upcoming Task", `${task.name} is due in about an hour!`);
-                });
-            }
+        if (confirm("Are you sure you want to clear all notifications?")) {
+            await supabase.from('notifications').delete().eq('user_id', currentUser.id);
+            await updateNotificationUI();
         }
     }
 
     async function updateNotificationUI() {
+        if (!currentUser) return;
         const { data: notifications, error } = await supabase.from('notifications')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('time', { ascending: false })
-            .limit(20);
+            .select('*').eq('user_id', currentUser.id)
+            .order('time', { ascending: false }).limit(20);
 
-        if (error) { console.error("Error fetching notifications:", error); return; }
+        if (error) return;
 
         const list = document.getElementById("notificationList");
         const count = document.getElementById("notificationCount");
-        list.innerHTML = "";
-
-        if (notifications.length === 0) {
-            list.innerHTML = "<li>No new notifications.</li>"; // Show message when empty
-        } else {
-            notifications.forEach(note => {
-                const li = document.createElement("li");
-                li.innerHTML = `<strong>${note.title}</strong><br><small>${note.message}</small><br><small>${new Date(note.time).toLocaleString()}</small>`;
-                list.appendChild(li);
-            });
-        }
+        list.innerHTML = notifications.length === 0 ? "<li>No new notifications.</li>" : 
+            notifications.map(note => `<li><strong>${note.title}</strong><br><small>${note.message}</small><br><small>${new Date(note.time).toLocaleString()}</small></li>`).join('');
         
         const unseen = notifications.filter(n => !n.seen).length;
-        if (unseen > 0) {
-            count.innerText = unseen;
-            count.style.display = "inline-block";
-        } else {
-            count.style.display = "none";
-        }
+        count.innerText = unseen;
+        count.style.display = unseen > 0 ? "inline-block" : "none";
     }
-</script>
+  </script>
+  
+  <div id="addTaskModal" class="modal">
+    <div class="modal-content">
+        <h2>Add New Task</h2>
+        <form onsubmit="event.preventDefault(); addTask();">
+            <div class="form-group">
+                <label for="taskName">Task Name</label>
+                <input type="text" id="taskName" placeholder="Enter task name" required>
+            </div>
+            <div class="form-group">
+                <label for="taskUrgency">Urgency</label>
+                <select id="taskUrgency">
+                    <option value="High">High</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="taskDuration">Duration (minutes)</label>
+                <input type="number" id="taskDuration" placeholder="Enter duration">
+            </div>
+            <div class="form-group">
+                <label for="taskDatetime">Due Date & Time</label>
+                <input type="datetime-local" id="taskDatetime">
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeAddTaskModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Task</button>
+            </div>
+        </form>
+    </div>
+  </div>
 
 </body>
-
 </html>
