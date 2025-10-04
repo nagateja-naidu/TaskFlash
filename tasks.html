@@ -128,9 +128,17 @@
       font-size: 1.2rem;
     }
 
-    .task-actions .complete { color: green; }
-    .task-actions .delete { color: red; }
-    .task-actions .edit { color: #007AFF; }
+    .task-actions .complete {
+      color: green;
+    }
+
+    .task-actions .delete {
+      color: red;
+    }
+
+    .task-actions .edit {
+      color: #007AFF;
+    }
 
     /* History Section */
     .history-section {
@@ -152,18 +160,23 @@
       padding: 1rem;
       border-radius: 0.6rem;
     }
-    
+
     /* --- CSS for Expired Tasks --- */
     .task-card.task-expired {
       background-color: #fef2f2;
       border-left: 5px solid #ef4444;
       opacity: 0.8;
     }
-    .task-expired h3 { color: #ef4444; }
+
+    .task-expired h3 {
+      color: #ef4444;
+    }
+
     .task-expired .task-actions .complete,
     .task-expired .task-actions .edit {
       display: none;
     }
+
     .status-badge {
       display: inline-block;
       padding: 0.2rem 0.6rem;
@@ -174,24 +187,75 @@
       vertical-align: middle;
       margin-left: 0.5rem;
     }
-    .status-badge.expired { background-color: #ef4444; }
+
+    .status-badge.expired {
+      background-color: #ef4444;
+    }
 
     /* --- CSS for Edit Modal --- */
     .modal {
-      display: none; position: fixed; z-index: 1000;
-      left: 0; top: 0; width: 100%; height: 100%;
-      overflow: auto; background-color: rgba(0,0,0,0.6);
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.6);
     }
+
     .modal-content {
-      background-color: #fefefe; margin: 10% auto; padding: 20px;
-      border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 1rem;
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 1rem;
     }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 1rem; margin-bottom: 1rem; }
-    .close { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
-    .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; margin-bottom: 0.5rem; }
-    .form-group input, .form-group select { width: 100%; padding: 0.7rem; border-radius: 0.5rem; border: 1px solid #ccc; }
-    .form-actions { text-align: right; margin-top: 1.5rem; }
+
+    .modal-header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .close {
+      color: #aaa;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      top: 10px;
+      right: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.7rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+    }
+
+    .form-actions {
+      text-align: right;
+      margin-top: 1.5rem;
+    }
   </style>
 </head>
 
@@ -260,7 +324,7 @@
       <div class="history-list" id="historyList"></div>
     </div>
   </div>
-  
+
   <script>
     let currentUser = null;
     let currentFilter = 'all';
@@ -268,194 +332,207 @@
     let searchQuery = "";
 
     document.addEventListener("DOMContentLoaded", async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            window.location.href = "login.html";
-        } else {
-            currentUser = session.user;
-            await initializePage();
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = "login.html";
+      } else {
+        currentUser = session.user;
+        await initializePage();
+      }
     });
 
     async function initializePage() {
-        await loadTasks();
-        await requestNotificationPermission();
-        setInterval(checkDueTasks, 60000);
-        await checkDueTasks();
+      await loadTasks();
+      await requestNotificationPermission();
+      setInterval(checkDueTasks, 60000);
+      await checkDueTasks();
     }
-    
+
     async function filterByAvailableTime() {
-        const available = parseInt(document.getElementById("availableTime").value);
-        if (isNaN(available) || available <= 0) return alert("Please enter a valid time in minutes.");
+      const available = parseInt(document.getElementById("availableTime").value);
+      if (isNaN(available) || available <= 0) return alert("Please enter a valid time in minutes.");
 
-        const { data: suitableTasks, error } = await supabase.from('tasks')
-            .select('*').eq('user_id', currentUser.id).eq('completed', false)
-            .lte('duration', available).not('duration', 'is', null);
+      const { data: suitableTasks, error } = await supabase.from('tasks')
+        .select('*').eq('user_id', currentUser.id).eq('completed', false)
+        .lte('duration', available).not('duration', 'is', null);
 
-        if (error) return console.error(error);
-        renderTasks(suitableTasks.length === 0 ? [] : suitableTasks);
-        document.getElementById("taskList").insertAdjacentHTML('afterbegin', suitableTasks.length === 0 ? `<p style="text-align:center;">No tasks can be completed within ${available} minutes.</p>` : '');
+      if (error) return console.error(error);
+      renderTasks(suitableTasks.length === 0 ? [] : suitableTasks);
+      document.getElementById("taskList").insertAdjacentHTML('afterbegin', suitableTasks.length === 0 ? `<p style="text-align:center;">No tasks can be completed within ${available} minutes.</p>` : '');
     }
 
     function clearAvailableTime() {
-        document.getElementById("availableTime").value = "";
-        loadTasks();
+      document.getElementById("availableTime").value = "";
+      loadTasks();
     }
-    
+
     async function logout() {
-        const { error } = await supabase.auth.signOut();
-        if (error) { alert("Error logging out: " + error.message); }
-        else { window.location.href = "login.html"; }
+      const { error } = await supabase.auth.signOut();
+      if (error) { alert("Error logging out: " + error.message); }
+      else { window.location.href = "login.html"; }
     }
 
     async function loadTasks() {
-        if (!currentUser) return;
-        let query = supabase.from('tasks').select('*').eq('user_id', currentUser.id);
+      if (!currentUser) return;
+      let query = supabase.from('tasks').select('*').eq('user_id', currentUser.id);
 
-        if (currentFilter === 'pending') query = query.eq('completed', false);
-        else if (currentFilter === 'completed') query = query.eq('completed', true);
-        if (searchQuery.trim() !== "") query = query.ilike('name', `%${searchQuery.trim()}%`);
-        if (currentSort === 'newest' || currentSort === 'oldest') {
-            query = query.order('due_datetime', { ascending: currentSort === 'oldest', nullsFirst: false });
-        }
-        
-        const { data: tasks, error } = await query;
-        if (error) return console.error("Error fetching tasks:", error);
+      if (currentFilter === 'pending') query = query.eq('completed', false);
+      else if (currentFilter === 'completed') query = query.eq('completed', true);
+      if (searchQuery.trim() !== "") query = query.ilike('name', `%${searchQuery.trim()}%`);
+      if (currentSort === 'newest' || currentSort === 'oldest') {
+        query = query.order('due_datetime', { ascending: currentSort === 'oldest', nullsFirst: false });
+      }
 
-        let processedTasks = [...tasks];
-        if (currentSort === 'urgencyHigh' || currentSort === 'urgencyLow') {
-            const order = { "High": 1, "Medium": 2, "Low": 3 };
-            processedTasks.sort((a, b) => currentSort === 'urgencyHigh' ? (order[a.urgency] || 99) - (order[b.urgency] || 99) : (order[b.urgency] || 99) - (order[a.urgency] || 99));
-        }
-        
-        document.getElementById("totalTasks").innerText = tasks.length;
-        document.getElementById("pendingTasks").innerText = tasks.filter(t => !t.completed).length;
-        document.getElementById("completedTasks").innerText = tasks.filter(t => t.completed).length;
+      const { data: tasks, error } = await query;
+      if (error) return console.error("Error fetching tasks:", error);
 
-        renderTasks(processedTasks);
-        
-        const historyList = document.getElementById("historyList");
-        historyList.innerHTML = "";
-        tasks.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).forEach(task => {
-            const card = document.createElement("div");
-            card.className = "history-card";
-            card.innerHTML = `<strong>${task.name}</strong> [${task.urgency}]<br><small>Created: ${new Date(task.created_at).toLocaleString()}</small><br><small>Completed: ${task.completed ? (task.completed_on ? new Date(task.completed_on).toLocaleString() : "Yes") : "Not yet"}</small>`;
-            historyList.appendChild(card);
-        });
+      let processedTasks = [...tasks];
+      if (currentSort === 'urgencyHigh' || currentSort === 'urgencyLow') {
+        const order = { "High": 1, "Medium": 2, "Low": 3 };
+        processedTasks.sort((a, b) => currentSort === 'urgencyHigh' ? (order[a.urgency] || 99) - (order[b.urgency] || 99) : (order[b.urgency] || 99) - (order[a.urgency] || 99));
+      }
+
+      document.getElementById("totalTasks").innerText = tasks.length;
+      document.getElementById("pendingTasks").innerText = tasks.filter(t => !t.completed).length;
+      document.getElementById("completedTasks").innerText = tasks.filter(t => t.completed).length;
+
+      renderTasks(processedTasks);
+
+      const historyList = document.getElementById("historyList");
+      historyList.innerHTML = "";
+      tasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).forEach(task => {
+        const card = document.createElement("div");
+        card.className = "history-card";
+        card.innerHTML = `<strong>${task.name}</strong> [${task.urgency}]<br><small>Created: ${new Date(task.created_at).toLocaleString()}</small><br><small>Completed: ${task.completed ? (task.completed_on ? new Date(task.completed_on).toLocaleString() : "Yes") : "Not yet"}</small>`;
+        historyList.appendChild(card);
+      });
     }
 
     function renderTasks(tasksToRender) {
-        const list = document.getElementById("taskList");
-        list.innerHTML = tasksToRender.length === 0 ? "<p style='text-align:center;'>No tasks found.</p>" : "";
-        if (tasksToRender.length === 0) return;
+      const list = document.getElementById("taskList");
+      list.innerHTML = tasksToRender.length === 0 ? "<p style='text-align:center;'>No tasks found.</p>" : "";
+      if (tasksToRender.length === 0) return;
 
-        const now = new Date();
-        tasksToRender.forEach(task => {
-            const card = document.createElement("div");
-            card.className = "task-card";
-            const dueTime = task.due_datetime ? new Date(task.due_datetime) : null;
-            const isExpired = !task.completed && dueTime && now > dueTime;
-            let statusBadge = '';
-            if (isExpired) {
-                card.classList.add("task-expired");
-                statusBadge = `<span class="status-badge expired">Expired</span>`;
-            }
+      const now = new Date();
+      tasksToRender.forEach(task => {
+        const card = document.createElement("div");
+        card.className = "task-card";
+        const dueTime = task.due_datetime ? new Date(task.due_datetime) : null;
+        let isExpired = false;
+        // Check if the task is incomplete and has a due date
+        if (!task.completed && dueTime) {
+          const today = new Date();
+          // Set today's time to the beginning of the day (midnight) for a clean date comparison
+          today.setHours(0, 0, 0, 0);
 
-            const info = document.createElement("div");
-            info.className = "task-info";
-            info.innerHTML = `<h3>${task.name} ${statusBadge} <small>[${task.urgency}]</small></h3><small>⏳ ${task.duration || "N/A"} mins | 📅 ${dueTime ? dueTime.toLocaleString() : "Not set"}</small>`;
-            
-            const actions = document.createElement("div");
-            actions.className = "task-actions";
-            actions.innerHTML = `
+          const dueDate = new Date(dueTime);
+          // Also set the task's due date time to midnight
+          dueDate.setHours(0, 0, 0, 0);
+
+          // A task is expired only if today's date is strictly greater than the due date
+          isExpired = today > dueDate;
+        }
+        let statusBadge = '';
+        if (isExpired) {
+          card.classList.add("task-expired");
+          statusBadge = `<span class="status-badge expired">Expired</span>`;
+        }
+
+        const info = document.createElement("div");
+        info.className = "task-info";
+        info.innerHTML = `<h3>${task.name} ${statusBadge} <small>[${task.urgency}]</small></h3><small>⏳ ${task.duration || "N/A"} mins | 📅 ${dueTime ? dueTime.toLocaleString() : "Not set"}</small>`;
+
+        const actions = document.createElement("div");
+        actions.className = "task-actions";
+        actions.innerHTML = `
                 <button class="complete" onclick="toggleComplete('${task.id}', ${task.completed})"><i class="fas fa-check-circle"></i></button>
                 <button class="edit" onclick="openEditModal('${task.id}')"><i class="fas fa-pencil-alt"></i></button>
                 <button class="delete" onclick="deleteTask('${task.id}')"><i class="fas fa-trash"></i></button>
             `;
-            
-            card.appendChild(info);
-            card.appendChild(actions);
-            list.appendChild(card);
-        });
+
+        card.appendChild(info);
+        card.appendChild(actions);
+        list.appendChild(card);
+      });
     }
 
     function filterTasks(type) {
-        currentFilter = type;
-        document.querySelectorAll('.task-filters button').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.textContent.toLowerCase() === type) btn.classList.add('active');
-        });
-        loadTasks();
+      currentFilter = type;
+      document.querySelectorAll('.task-filters button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.toLowerCase() === type) btn.classList.add('active');
+      });
+      loadTasks();
     }
 
     function sortTasks() {
-        currentSort = document.getElementById("sortSelect").value;
-        loadTasks();
+      currentSort = document.getElementById("sortSelect").value;
+      loadTasks();
     }
 
     function searchTasks() {
-        searchQuery = document.getElementById("searchInput").value;
-        loadTasks();
+      searchQuery = document.getElementById("searchInput").value;
+      loadTasks();
     }
 
     async function toggleComplete(taskId, currentStatus) {
-        const { error } = await supabase.from('tasks')
-            .update({ completed: !currentStatus, completed_on: !currentStatus ? new Date().toISOString() : null })
-            .eq('id', taskId);
-        if (error) alert("Error updating task: " + error.message);
-        else loadTasks();
+      const { error } = await supabase.from('tasks')
+        .update({ completed: !currentStatus, completed_on: !currentStatus ? new Date().toISOString() : null })
+        .eq('id', taskId);
+      if (error) alert("Error updating task: " + error.message);
+      else loadTasks();
     }
 
     async function deleteTask(taskId) {
-        if (confirm("Are you sure you want to delete this task?")) {
-            const { error } = await supabase.from('tasks').delete().eq('id', taskId);
-            if (error) alert("Error deleting task: " + error.message);
-            else loadTasks();
-        }
+      if (confirm("Are you sure you want to delete this task?")) {
+        const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+        if (error) alert("Error deleting task: " + error.message);
+        else loadTasks();
+      }
     }
 
     // --- JAVASCRIPT FOR EDIT MODAL ---
     async function openEditModal(taskId) {
-        const { data: task, error } = await supabase.from('tasks').select('*').eq('id', taskId).single();
-        if (error) return alert("Error fetching task details.");
-        
-        document.getElementById('editTaskId').value = task.id;
-        document.getElementById('editTaskName').value = task.name;
-        document.getElementById('editTaskUrgency').value = task.urgency;
-        document.getElementById('editTaskDuration').value = task.duration;
-        
-        if (task.due_datetime) {
-            const d = new Date(task.due_datetime);
-            const localDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
-            document.getElementById('editTaskDatetime').value = localDate.toISOString().slice(0, 16);
-        } else {
-            document.getElementById('editTaskDatetime').value = '';
-        }
-        document.getElementById('editTaskModal').style.display = 'block';
+      const { data: task, error } = await supabase.from('tasks').select('*').eq('id', taskId).single();
+      if (error) return alert("Error fetching task details.");
+
+      document.getElementById('editTaskId').value = task.id;
+      document.getElementById('editTaskName').value = task.name;
+      document.getElementById('editTaskUrgency').value = task.urgency;
+      document.getElementById('editTaskDuration').value = task.duration;
+
+      if (task.due_datetime) {
+        const d = new Date(task.due_datetime);
+        const localDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+        document.getElementById('editTaskDatetime').value = localDate.toISOString().slice(0, 16);
+      } else {
+        document.getElementById('editTaskDatetime').value = '';
+      }
+      document.getElementById('editTaskModal').style.display = 'block';
     }
 
     function closeEditModal() {
-        document.getElementById('editTaskModal').style.display = 'none';
+      document.getElementById('editTaskModal').style.display = 'none';
     }
 
     async function saveTaskChanges() {
-        const taskId = document.getElementById('editTaskId').value;
-        const name = document.getElementById('editTaskName').value;
-        if (!name) return alert("Task name cannot be empty.");
-        
-        const updatedTask = {
-            name: name,
-            urgency: document.getElementById('editTaskUrgency').value,
-            duration: parseInt(document.getElementById('editTaskDuration').value) || null,
-            due_datetime: document.getElementById('editTaskDatetime').value ? new Date(document.getElementById('editTaskDatetime').value).toISOString() : null,
-        };
+      const taskId = document.getElementById('editTaskId').value;
+      const name = document.getElementById('editTaskName').value;
+      if (!name) return alert("Task name cannot be empty.");
 
-        const { error } = await supabase.from('tasks').update(updatedTask).eq('id', taskId);
-        if (error) alert("Error updating task: " + error.message);
-        else {
-            closeEditModal();
-            await loadTasks();
-        }
+      const updatedTask = {
+        name: name,
+        urgency: document.getElementById('editTaskUrgency').value,
+        duration: parseInt(document.getElementById('editTaskDuration').value) || null,
+        due_datetime: document.getElementById('editTaskDatetime').value ? new Date(document.getElementById('editTaskDatetime').value).toISOString() : null,
+      };
+
+      const { error } = await supabase.from('tasks').update(updatedTask).eq('id', taskId);
+      if (error) alert("Error updating task: " + error.message);
+      else {
+        closeEditModal();
+        await loadTasks();
+      }
     }
   </script>
 
@@ -498,4 +575,5 @@
   </div>
 
 </body>
+
 </html>
