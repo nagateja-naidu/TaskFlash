@@ -161,11 +161,10 @@
       border-radius: 0.6rem;
     }
 
-    /* --- CSS for Expired Tasks --- */
+    /* --- CSS FOR EXPIRED TASKS --- */
     .task-card.task-expired {
       background-color: #fef2f2;
       border-left: 5px solid #ef4444;
-      opacity: 0.8;
     }
 
     .task-expired h3 {
@@ -191,6 +190,27 @@
     .status-badge.expired {
       background-color: #ef4444;
     }
+    
+    /* --- CSS FOR COMPLETED TASKS (UPDATED) --- */
+    .task-card.task-completed {
+        background-color: #f0fdf4; /* Light Green */
+        border-left: 5px solid #22c55e; /* Solid Green */
+    }
+
+    .task-completed h3 {
+        color: #166534; /* Darker Green for text */
+        /* text-decoration: line-through; -- Strikethrough removed as requested */
+    }
+
+    .task-completed .task-actions .complete,
+    .task-completed .task-actions .edit {
+        display: none; /* Hide complete and edit buttons as requested */
+    }
+
+    .status-badge.completed {
+        background-color: #22c55e; /* Green background for the new badge */
+    }
+
 
     /* --- CSS for Edit Modal --- */
     .modal {
@@ -413,29 +433,28 @@
       list.innerHTML = tasksToRender.length === 0 ? "<p style='text-align:center;'>No tasks found.</p>" : "";
       if (tasksToRender.length === 0) return;
 
-      const now = new Date();
       tasksToRender.forEach(task => {
         const card = document.createElement("div");
         card.className = "task-card";
         const dueTime = task.due_datetime ? new Date(task.due_datetime) : null;
         let isExpired = false;
-        // Check if the task is incomplete and has a due date
+        
         if (!task.completed && dueTime) {
           const today = new Date();
-          // Set today's time to the beginning of the day (midnight) for a clean date comparison
           today.setHours(0, 0, 0, 0);
-
           const dueDate = new Date(dueTime);
-          // Also set the task's due date time to midnight
           dueDate.setHours(0, 0, 0, 0);
-
-          // A task is expired only if today's date is strictly greater than the due date
           isExpired = today > dueDate;
         }
+
         let statusBadge = '';
-        if (isExpired) {
-          card.classList.add("task-expired");
-          statusBadge = `<span class="status-badge expired">Expired</span>`;
+        // --- LOGIC UPDATED TO ADD COMPLETED BADGE ---
+        if (task.completed) {
+            card.classList.add("task-completed");
+            statusBadge = `<span class="status-badge completed">Completed</span>`;
+        } else if (isExpired) {
+            card.classList.add("task-expired");
+            statusBadge = `<span class="status-badge expired">Expired</span>`;
         }
 
         const info = document.createElement("div");
